@@ -170,6 +170,11 @@
         <input type="number" id="logiciels" value="200" oninput="update()">
         <div class="unit">€/mois</div>
       </div>
+      <div class="param-field" style="border-left:2px solid #2980b9;padding-left:10px;">
+        <label style="color:#3498db;">Salaire brut président (SAS)</label>
+        <input type="number" id="salaire" value="0" oninput="update()">
+        <div class="unit">€/mois · charges patronales +45 % incluses</div>
+      </div>
     </div>
   </div>
 
@@ -321,10 +326,12 @@
         <tr class="row-charge"><td>iClosed</td><td></td><td class="text-right mono val-neg" id="sttc-iclosed"></td><td class="text-right" id="sttc-iclosed-pct"></td><td></td></tr>
         <tr class="row-charge"><td>Logiciels</td><td></td><td class="text-right mono val-neg" id="sttc-logiciels"></td><td class="text-right" id="sttc-logiciels-pct"></td><td></td></tr>
         <tr class="row-total-charges"><td colspan="2"><strong>Total charges fixes</strong></td><td class="text-right mono val-neg" id="sttc-total-charges"></td><td class="text-right" id="sttc-total-charges-pct"></td><td></td></tr>
+        <tr class="row-is" id="sttc-salaire-row"><td>Salaire brut président</td><td class="val-muted" id="sttc-salaire-calc"></td><td class="text-right mono val-neg" id="sttc-salaire-cout"></td><td class="text-right" id="sttc-salaire-cout-pct"></td><td></td></tr>
         <tr class="row-avant-is"><td colspan="2"><strong>Résultat avant IS</strong></td><td class="text-right mono" id="sttc-avant-is"></td><td class="text-right" id="sttc-avant-is-pct"></td><td></td></tr>
         <tr class="row-is"><td>IS — 15 %</td><td></td><td class="text-right mono val-neg" id="sttc-is"></td><td class="text-right" id="sttc-is-pct"></td><td></td></tr>
         <tr class="row-pfu"><td>PFU flat tax — 30 %</td><td></td><td class="text-right mono val-neg" id="sttc-pfu"></td><td class="text-right" id="sttc-pfu-pct"></td><td></td></tr>
         <tr class="row-net"><td colspan="2"><strong>NET DIVIDENDES</strong></td><td class="text-right mono" id="sttc-net"></td><td class="text-right val-pos" id="sttc-net-pct"></td><td></td></tr>
+        <tr id="sttc-nettotal-row" class="row-net-dubai"><td colspan="2"><strong>NET TOTAL (dividendes + salaire net)</strong></td><td class="text-right mono" id="sttc-net-total"></td><td class="text-right val-gold" id="sttc-net-total-pct"></td><td></td></tr>
       </table>
     </div>
   </div>
@@ -370,10 +377,12 @@
         <tr class="row-charge"><td>iClosed</td><td></td><td class="text-right mono val-neg" id="sht-iclosed"></td><td class="text-right" id="sht-iclosed-pct"></td><td></td></tr>
         <tr class="row-charge"><td>Logiciels</td><td></td><td class="text-right mono val-neg" id="sht-logiciels"></td><td class="text-right" id="sht-logiciels-pct"></td><td></td></tr>
         <tr class="row-total-charges"><td colspan="2"><strong>Total charges fixes</strong></td><td class="text-right mono val-neg" id="sht-total-charges"></td><td class="text-right" id="sht-total-charges-pct"></td><td></td></tr>
+        <tr class="row-is" id="sht-salaire-row"><td>Salaire brut président</td><td class="val-muted" id="sht-salaire-calc"></td><td class="text-right mono val-neg" id="sht-salaire-cout"></td><td class="text-right" id="sht-salaire-cout-pct"></td><td></td></tr>
         <tr class="row-avant-is"><td colspan="2"><strong>Résultat avant IS</strong></td><td class="text-right mono" id="sht-avant-is"></td><td class="text-right" id="sht-avant-is-pct"></td><td></td></tr>
         <tr class="row-is"><td>IS — 15 %</td><td></td><td class="text-right mono val-neg" id="sht-is"></td><td class="text-right" id="sht-is-pct"></td><td></td></tr>
         <tr class="row-pfu"><td>PFU flat tax — 30 %</td><td></td><td class="text-right mono val-neg" id="sht-pfu"></td><td class="text-right" id="sht-pfu-pct"></td><td></td></tr>
         <tr class="row-net"><td colspan="2"><strong>NET DIVIDENDES</strong></td><td class="text-right mono" id="sht-net"></td><td class="text-right val-pos" id="sht-net-pct"></td><td></td></tr>
+        <tr id="sht-nettotal-row" class="row-net-dubai"><td colspan="2"><strong>NET TOTAL (dividendes + salaire net)</strong></td><td class="text-right mono" id="sht-net-total"></td><td class="text-right val-gold" id="sht-net-total-pct"></td><td></td></tr>
       </table>
     </div>
   </div>
@@ -717,21 +726,27 @@ function update() {
   const si_margeApres = ca - totalCom_ttc;
   const si_net = ca - totalCom_ttc - charges;
 
+  const salaire = parseFloat(document.getElementById('salaire').value)||0;
+  const salaireCout = salaire * 1.45;   // coût total entreprise (patronales +45%)
+  const salaireNet  = salaire * 0.78;   // net reçu après cotisations salariales
+
   // SAS TTC
   const sttc_margeApres = caHT - totalCom_ttc;
-  const sttc_avantIS = caHT - totalCom_ttc - charges;
-  const sttc_is = sttc_avantIS * 0.15;
-  const sttc_apresIS = sttc_avantIS - sttc_is;
+  const sttc_avantIS = caHT - totalCom_ttc - charges - salaireCout;
+  const sttc_is = Math.max(0, sttc_avantIS * 0.15);
+  const sttc_apresIS = Math.max(0, sttc_avantIS - sttc_is);
   const sttc_pfu = sttc_apresIS * 0.30;
   const sttc_net = sttc_apresIS - sttc_pfu;
+  const sttc_netTotal = sttc_net + salaireNet;
 
   // SAS HT
   const sht_margeApres = caHT - totalCom_ht;
-  const sht_avantIS = caHT - totalCom_ht - charges;
-  const sht_is = sht_avantIS * 0.15;
-  const sht_apresIS = sht_avantIS - sht_is;
+  const sht_avantIS = caHT - totalCom_ht - charges - salaireCout;
+  const sht_is = Math.max(0, sht_avantIS * 0.15);
+  const sht_apresIS = Math.max(0, sht_avantIS - sht_is);
   const sht_pfu = sht_apresIS * 0.30;
   const sht_net = sht_apresIS - sht_pfu;
+  const sht_netTotal = sht_net + salaireNet;
 
   // Will à 10%
   const willCom10_ht = willBase_ht * 0.10;
@@ -804,10 +819,15 @@ function update() {
   set('sttc-iclosed','– '+fmt(iclosed)); set('sttc-iclosed-pct',pct(iclosed,caHT));
   set('sttc-logiciels','– '+fmt(logiciels)); set('sttc-logiciels-pct',pct(logiciels,caHT));
   set('sttc-total-charges','– '+fmt(charges)); set('sttc-total-charges-pct', pct(charges,caHT));
+  document.getElementById('sttc-salaire-row').style.display = salaire > 0 ? '' : 'none';
+  document.getElementById('sttc-nettotal-row').style.display = salaire > 0 ? '' : 'none';
+  set('sttc-salaire-calc', fmt(salaire)+' brut · coût total ×1.45');
+  set('sttc-salaire-cout','– '+fmt(salaireCout)); set('sttc-salaire-cout-pct', pct(salaireCout,caHT));
   set('sttc-avant-is', fmt(sttc_avantIS)); set('sttc-avant-is-pct', pct(sttc_avantIS,caHT));
   set('sttc-is','– '+fmt(sttc_is)); set('sttc-is-pct', pct(sttc_is,caHT));
   set('sttc-pfu','– '+fmt(sttc_pfu)); set('sttc-pfu-pct', pct(sttc_pfu,caHT));
   set('sttc-net', fmt(sttc_net)); set('sttc-net-pct', pct(sttc_net,caHT));
+  set('sttc-net-total', fmt(sttc_netTotal)); set('sttc-net-total-pct', pct(sttc_netTotal,caHT));
 
   // ── SAS HT ──
   set('sht-net-card', fmt(sht_net)); set('sht-pct-card', pct(sht_net,caHT) + ' du CA HT');
@@ -825,10 +845,15 @@ function update() {
   set('sht-iclosed','– '+fmt(iclosed)); set('sht-iclosed-pct',pct(iclosed,caHT));
   set('sht-logiciels','– '+fmt(logiciels)); set('sht-logiciels-pct',pct(logiciels,caHT));
   set('sht-total-charges','– '+fmt(charges)); set('sht-total-charges-pct', pct(charges,caHT));
+  document.getElementById('sht-salaire-row').style.display = salaire > 0 ? '' : 'none';
+  document.getElementById('sht-nettotal-row').style.display = salaire > 0 ? '' : 'none';
+  set('sht-salaire-calc', fmt(salaire)+' brut · coût total ×1.45');
+  set('sht-salaire-cout','– '+fmt(salaireCout)); set('sht-salaire-cout-pct', pct(salaireCout,caHT));
   set('sht-avant-is', fmt(sht_avantIS)); set('sht-avant-is-pct', pct(sht_avantIS,caHT));
   set('sht-is','– '+fmt(sht_is)); set('sht-is-pct', pct(sht_is,caHT));
   set('sht-pfu','– '+fmt(sht_pfu)); set('sht-pfu-pct', pct(sht_pfu,caHT));
   set('sht-net', fmt(sht_net)); set('sht-net-pct', pct(sht_net,caHT));
+  set('sht-net-total', fmt(sht_netTotal)); set('sht-net-total-pct', pct(sht_netTotal,caHT));
 
   // ── COMPARATIF ──
   set('cmp-si-card', fmt(si_net)); set('cmp-si-pct', pct(si_net,ca)+' du CA TTC'); set('cmp-si-annual', fmt(si_net*12)+' / an');
@@ -881,10 +906,6 @@ function update() {
   set('gc-pct', '+'+gc_pct_gain+' %'); set('gc-marge-finale', pct(gc_comb,caHT)+' du CA HT');
   set('gc-col-will-cur', willPct+' %');
 
-  // Tableau détaillé 4 scénarios
-  // Scénario REF : Will willPct% TTC
-  const ref_avis = sttc_avantIS;
-  const ref_is = sttc_is; const ref_pfu = sttc_pfu; const ref_net = sttc_net;
   // ── Labels colonnes
   set('gc-col-maurine-pct', maurinePct+' %');
   set('gc-col-deborah-pct', deborahPct+' %');
