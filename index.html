@@ -724,10 +724,10 @@ function update() {
 
   // Commission bases
   const willBase_ttc = ca * 0.5;
-  const maurineBase_ttc = ca * 0.5;
+  const maurineBase_ttc = ca;
   const deborahBase_ttc = ca;
   const willBase_ht = caHT * 0.5;
-  const maurineBase_ht = caHT * 0.5;
+  const maurineBase_ht = caHT;
   const deborahBase_ht = caHT;
 
   // Commissions TTC
@@ -1006,7 +1006,7 @@ function update() {
 
   // Scénario Dubai actuel : Will willPct% sur CA TTC=HT
   const dub_willCom    = ca * 0.5 * willPct/100;
-  const dub_maurineCom = ca * 0.5 * maurinePct/100;
+  const dub_maurineCom = ca * maurinePct/100;
   const dub_deborahCom = ca * deborahPct/100;
   const dub_totCom     = dub_willCom + dub_maurineCom + dub_deborahCom;
   const dub_net        = ca - dub_totCom - charges - salaireCout;
