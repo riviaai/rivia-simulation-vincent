@@ -543,6 +543,13 @@
           <td class="text-right mono val-neg" id="gc-r-chg-l2"></td>
           <td class="text-right mono val-neg" id="gc-r-chg-comb"></td>
         </tr>
+        <tr class="row-is" id="gc-r-salaire-row">
+          <td>Salaire président (coût entreprise)</td>
+          <td class="text-right mono val-neg" id="gc-r-sal-ref"></td>
+          <td class="text-right mono val-neg" id="gc-r-sal-l1"></td>
+          <td class="text-right mono val-neg" id="gc-r-sal-l2"></td>
+          <td class="text-right mono val-neg" id="gc-r-sal-comb"></td>
+        </tr>
         <tr class="row-avant-is">
           <td><strong>Résultat avant IS</strong></td>
           <td class="text-right mono" id="gc-r-avis-ref"></td>
@@ -570,6 +577,13 @@
           <td class="text-right mono" style="color:#3498db;" id="gc-r-net-l1"></td>
           <td class="text-right mono" style="color:#e67e22;" id="gc-r-net-l2"></td>
           <td class="text-right mono val-pos" id="gc-r-net-comb"></td>
+        </tr>
+        <tr class="row-net-dubai" id="gc-r-nettotal-row">
+          <td><strong>NET TOTAL (div. + salaire net) / mois</strong></td>
+          <td class="text-right mono val-muted" id="gc-r-nettotal-ref"></td>
+          <td class="text-right mono" style="color:#3498db;" id="gc-r-nettotal-l1"></td>
+          <td class="text-right mono" style="color:#e67e22;" id="gc-r-nettotal-l2"></td>
+          <td class="text-right mono val-pos" id="gc-r-nettotal-comb"></td>
         </tr>
         <tr style="background:#0a0f20;">
           <td>% du CA HT</td>
@@ -642,6 +656,12 @@
           <td>Charges fixes</td>
           <td class="text-right mono val-neg" id="gc-d-chg-ref"></td>
           <td class="text-right mono val-neg" id="gc-d-chg-w10"></td>
+          <td class="text-right val-muted">—</td>
+        </tr>
+        <tr class="row-is" id="gc-d-salaire-row">
+          <td>Salaire président (coût entreprise)</td>
+          <td class="text-right mono val-neg" id="gc-d-sal-ref"></td>
+          <td class="text-right mono val-neg" id="gc-d-sal-w10"></td>
           <td class="text-right val-muted">—</td>
         </tr>
         <tr style="background:#1a1400;">
@@ -929,42 +949,53 @@ function update() {
   const l2_maurineCom = maurineBase_ttc * maurinePct/100;
   const l2_deborahCom = deborahBase_ttc * deborahPct/100;
   const l2_totCom     = l2_willCom + l2_maurineCom + l2_deborahCom;
-  const l2_avis = caHT - l2_totCom - charges;
-  const l2_is = l2_avis * 0.15; const l2_pfu = (l2_avis-l2_is)*0.30; const l2_net = (l2_avis-l2_is)*0.70;
+  const l2_avis = caHT - l2_totCom - charges - salaireCout;
+  const l2_is = Math.max(0,l2_avis * 0.15); const l2_pfu = Math.max(0,(l2_avis-l2_is)*0.30); const l2_net = Math.max(0,(l2_avis-l2_is)*0.70);
 
   // Combiné : Will 10%, base HT
   const comb_willCom    = willBase_ht * 0.10;
   const comb_maurineCom = maurineBase_ht * maurinePct/100;
   const comb_deborahCom = deborahBase_ht * deborahPct/100;
   const comb_totCom     = comb_willCom + comb_maurineCom + comb_deborahCom;
-  const comb_avis = caHT - comb_totCom - charges;
-  const comb_is = comb_avis * 0.15; const comb_pfu = (comb_avis-comb_is)*0.30; const comb_net = (comb_avis-comb_is)*0.70;
+  const comb_avis = caHT - comb_totCom - charges - salaireCout;
+  const comb_is = Math.max(0,comb_avis * 0.15); const comb_pfu = Math.max(0,(comb_avis-comb_is)*0.30); const comb_net = Math.max(0,(comb_avis-comb_is)*0.70);
+
+  const ref_netTotal  = ref_net  + salaireNet;
+  const l1_netTotal   = l1_net   + salaireNet;
+  const l2_netTotal   = l2_net   + salaireNet;
+  const comb_netTotal = comb_net + salaireNet;
 
   const scen = [
-    ['ref',  caHT, ref_willCom,  ref_maurineCom,  ref_deborahCom,  totalCom_ttc, charges, ref_avis,  ref_is,  ref_pfu,  ref_net],
-    ['l1',   caHT, l1_willCom,   l1_maurineCom,   l1_deborahCom,   totalCom_ht,  charges, l1_avis,   l1_is,   l1_pfu,   l1_net],
-    ['l2',   caHT, l2_willCom,   l2_maurineCom,   l2_deborahCom,   l2_totCom,    charges, l2_avis,   l2_is,   l2_pfu,   l2_net],
-    ['comb', caHT, comb_willCom, comb_maurineCom, comb_deborahCom, comb_totCom,  charges, comb_avis, comb_is, comb_pfu, comb_net],
+    ['ref',  caHT, ref_willCom,  ref_maurineCom,  ref_deborahCom,  totalCom_ttc, charges, salaireCout, ref_avis,  ref_is,  ref_pfu,  ref_net,  ref_netTotal],
+    ['l1',   caHT, l1_willCom,   l1_maurineCom,   l1_deborahCom,   totalCom_ht,  charges, salaireCout, l1_avis,   l1_is,   l1_pfu,   l1_net,   l1_netTotal],
+    ['l2',   caHT, l2_willCom,   l2_maurineCom,   l2_deborahCom,   l2_totCom,    charges, salaireCout, l2_avis,   l2_is,   l2_pfu,   l2_net,   l2_netTotal],
+    ['comb', caHT, comb_willCom, comb_maurineCom, comb_deborahCom, comb_totCom,  charges, salaireCout, comb_avis, comb_is, comb_pfu, comb_net, comb_netTotal],
   ];
-  scen.forEach(([s, ht, wc, mc, dc, tc, chg, av, is_, pfu, net]) => {
-    set('gc-r-caht-'+s,    fmt(ht));
-    set('gc-r-will-'+s,    '– '+fmt(wc));
-    set('gc-r-maurine-'+s, '– '+fmt(mc));
-    set('gc-r-deborah-'+s, '– '+fmt(dc));
-    set('gc-r-totcom-'+s,  '– '+fmt(tc));
-    set('gc-r-chg-'+s,     '– '+fmt(chg));
-    set('gc-r-avis-'+s,    fmt(av));
-    set('gc-r-is-'+s,      '– '+fmt(is_));
-    set('gc-r-pfu-'+s,     '– '+fmt(pfu));
-    set('gc-r-net-'+s,     fmt(net));
-    set('gc-r-pct-'+s,     pct(net, caHT));
+  const showSal = salaire > 0;
+  document.getElementById('gc-r-salaire-row').style.display  = showSal ? '' : 'none';
+  document.getElementById('gc-r-nettotal-row').style.display = showSal ? '' : 'none';
+  scen.forEach(([s, ht, wc, mc, dc, tc, chg, sal, av, is_, pfu, net, netTotal]) => {
+    set('gc-r-caht-'+s,      fmt(ht));
+    set('gc-r-will-'+s,      '– '+fmt(wc));
+    set('gc-r-maurine-'+s,   '– '+fmt(mc));
+    set('gc-r-deborah-'+s,   '– '+fmt(dc));
+    set('gc-r-totcom-'+s,    '– '+fmt(tc));
+    set('gc-r-chg-'+s,       '– '+fmt(chg));
+    set('gc-r-sal-'+s,       sal > 0 ? '– '+fmt(sal) : '—');
+    set('gc-r-avis-'+s,      fmt(av));
+    set('gc-r-is-'+s,        '– '+fmt(is_));
+    set('gc-r-pfu-'+s,       '– '+fmt(pfu));
+    set('gc-r-net-'+s,       fmt(net));
+    set('gc-r-nettotal-'+s,  fmt(netTotal));
+    set('gc-r-pct-'+s,       pct(showSal ? netTotal : net, caHT));
   });
-  set('gc-r-gain-l1',    '+'+fmt(l1_net-ref_net));
-  set('gc-r-gain-l2',    '+'+fmt(l2_net-ref_net));
-  set('gc-r-gain-comb',  '+'+fmt(comb_net-ref_net));
-  set('gc-r-gainy-l1',   '+'+fmt((l1_net-ref_net)*12));
-  set('gc-r-gainy-l2',   '+'+fmt((l2_net-ref_net)*12));
-  set('gc-r-gainy-comb', '+'+fmt((comb_net-ref_net)*12));
+  const gainBase = showSal ? ref_netTotal : ref_net;
+  set('gc-r-gain-l1',    '+'+fmt((showSal ? l1_netTotal  : l1_net)  - gainBase));
+  set('gc-r-gain-l2',    '+'+fmt((showSal ? l2_netTotal  : l2_net)  - gainBase));
+  set('gc-r-gain-comb',  '+'+fmt((showSal ? comb_netTotal: comb_net) - gainBase));
+  set('gc-r-gainy-l1',   '+'+fmt(((showSal ? l1_netTotal  : l1_net)  - gainBase)*12));
+  set('gc-r-gainy-l2',   '+'+fmt(((showSal ? l2_netTotal  : l2_net)  - gainBase)*12));
+  set('gc-r-gainy-comb', '+'+fmt(((showSal ? comb_netTotal: comb_net) - gainBase)*12));
 
   // ── DUBAI (sans impôt) ──
   // TTC = HT = ca (pas de TVA), pas d'IS, pas de PFU
@@ -978,12 +1009,18 @@ function update() {
   const dub_maurineCom = ca * 0.5 * maurinePct/100;
   const dub_deborahCom = ca * deborahPct/100;
   const dub_totCom     = dub_willCom + dub_maurineCom + dub_deborahCom;
-  const dub_net        = ca - dub_totCom - charges;
+  const dub_net        = ca - dub_totCom - charges - salaireCout;
+  const dub_netTotal   = dub_net + salaireNet;
 
   // Scénario Dubai Will 10%
-  const dub10_willCom = ca * 0.5 * 0.10;
-  const dub10_totCom  = dub10_willCom + dub_maurineCom + dub_deborahCom;
-  const dub10_net     = ca - dub10_totCom - charges;
+  const dub10_willCom  = ca * 0.5 * 0.10;
+  const dub10_totCom   = dub10_willCom + dub_maurineCom + dub_deborahCom;
+  const dub10_net      = ca - dub10_totCom - charges - salaireCout;
+  const dub10_netTotal = dub10_net + salaireNet;
+
+  document.getElementById('gc-d-salaire-row').style.display = showSal ? '' : 'none';
+  set('gc-d-sal-ref', showSal ? '– '+fmt(salaireCout) : '—');
+  set('gc-d-sal-w10', showSal ? '– '+fmt(salaireCout) : '—');
 
   set('gc-d-ca-ref',      fmt(ca));
   set('gc-d-ca-w10',      fmt(ca));
@@ -999,14 +1036,16 @@ function update() {
   set('gc-d-totcom-gain', '+'+fmt(dub_totCom-dub10_totCom));
   set('gc-d-chg-ref',     '– '+fmt(charges));
   set('gc-d-chg-w10',     '– '+fmt(charges));
-  set('gc-d-net-ref',     fmt(dub_net));
-  set('gc-d-net-w10',     fmt(dub10_net));
-  set('gc-d-net-gain',    '+'+fmt(dub10_net-dub_net));
-  set('gc-d-pct-ref',     pct(dub_net, ca));
-  set('gc-d-pct-w10',     pct(dub10_net, ca));
-  set('gc-d-annual-ref',  fmt(dub_net*12));
-  set('gc-d-annual-w10',  fmt(dub10_net*12));
-  set('gc-d-annual-gain', '+'+fmt((dub10_net-dub_net)*12));
+  const dub_display     = showSal ? dub_netTotal  : dub_net;
+  const dub10_display   = showSal ? dub10_netTotal : dub10_net;
+  set('gc-d-net-ref',     fmt(dub_display));
+  set('gc-d-net-w10',     fmt(dub10_display));
+  set('gc-d-net-gain',    '+'+fmt(dub10_display - dub_display));
+  set('gc-d-pct-ref',     pct(dub_display, ca));
+  set('gc-d-pct-w10',     pct(dub10_display, ca));
+  set('gc-d-annual-ref',  fmt(dub_display*12));
+  set('gc-d-annual-w10',  fmt(dub10_display*12));
+  set('gc-d-annual-gain', '+'+fmt((dub10_display-dub_display)*12));
 }
 
 update();
