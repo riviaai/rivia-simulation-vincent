@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulation Commissions — Vincent</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f1117; color: #e0e6f0; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
+
+  .top-bar { background: #1a2744; padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #2a3a6a; }
+  .top-bar h1 { font-size: 20px; font-weight: 700; color: #fff; letter-spacing: .3px; }
+  .top-bar .sub { font-size: 12px; color: #8a9cc0; margin-top: 3px; }
+  .badge { background: #e67e22; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; letter-spacing: .5px; }
+
+  .container { max-width: 1300px; margin: 0 auto; padding: 24px 24px 60px; }
+
+  /* Inputs */
+  .params-card { background: #161b2e; border: 1px solid #2a3a6a; border-radius: 10px; padding: 20px 24px; margin-bottom: 28px; }
+  .params-title { font-size: 13px; font-weight: 700; color: #8a9cc0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+  .params-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+  .param-field label { display: block; font-size: 11px; color: #8a9cc0; margin-bottom: 5px; font-weight: 600; letter-spacing: .4px; }
+  .param-field input { width: 100%; background: #0f1117; border: 1px solid #2a3a6a; border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 13px; font-weight: 600; }
+  .param-field input:focus { outline: none; border-color: #4a7cc0; }
+  .param-field .unit { font-size: 11px; color: #8a9cc0; margin-top: 3px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; flex-wrap: wrap; }
+  .tab { padding: 9px 18px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; border: 1px solid #2a3a6a; background: #161b2e; color: #8a9cc0; transition: all .15s; }
+  .tab.active { background: #1a2744; color: #fff; border-color: #4a7cc0; }
+  .tab:hover:not(.active) { border-color: #4a7cc0; color: #c0d0f0; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Section cards */
+  .section-card { background: #161b2e; border: 1px solid #2a3a6a; border-radius: 10px; margin-bottom: 20px; overflow: hidden; }
+  .section-header { background: #1a2744; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2a3a6a; }
+  .section-header h2 { font-size: 15px; font-weight: 700; color: #fff; }
+  .section-header .tag { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 4px; letter-spacing: .5px; }
+  .tag-gold { background: #e67e22; color: #fff; }
+  .tag-blue { background: #2980b9; color: #fff; }
+  .tag-green { background: #27ae60; color: #fff; }
+  .tag-purple { background: #8e44ad; color: #fff; }
+  .tag-red { background: #c0392b; color: #fff; }
+  .section-sub { padding: 10px 20px; font-size: 12px; color: #8a9cc0; border-bottom: 1px solid #1a2330; font-style: italic; }
+  .section-sub .warning { color: #e67e22; font-weight: 600; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #1e2840; color: #8a9cc0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; padding: 10px 16px; text-align: left; }
+  td { padding: 10px 16px; border-bottom: 1px solid #1a2330; font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+
+  .row-revenue td { color: #27ae60; font-weight: 700; font-size: 14px; }
+  .row-commission td { color: #e67e22; }
+  .row-subtotal td { background: #1a2330; font-weight: 700; color: #c0d0f0; }
+  .row-total-com td { background: #1e1a10; font-weight: 700; color: #e67e22; }
+  .row-charge td { color: #9ab; }
+  .row-total-charges td { background: #1a2330; font-weight: 700; color: #8a9cc0; }
+  .row-avant-is td { background: #1a2330; font-weight: 700; color: #c0d0f0; }
+  .row-is td { color: #c0392b; }
+  .row-pfu td { color: #c0392b; }
+  .row-net td { background: #0d2010; font-weight: 700; font-size: 15px; }
+  .row-net td:last-child { color: #2ecc71; }
+  .row-net-dubai td { background: #1a1400; font-weight: 700; font-size: 15px; }
+  .row-net-dubai td:last-child { color: #f1c40f; }
+
+  .val-pos { color: #2ecc71; font-weight: 700; }
+  .val-neg { color: #e74c3c; font-weight: 700; }
+  .val-gold { color: #f1c40f; font-weight: 700; }
+  .val-blue { color: #3498db; font-weight: 700; }
+  .val-muted { color: #8a9cc0; }
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .mono { font-family: 'Courier New', monospace; }
+
+  /* Summary cards */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .summary-card { border-radius: 10px; padding: 20px; border: 1px solid; }
+  .card-gold { background: #1a1400; border-color: #e67e22; }
+  .card-blue { background: #0d1e35; border-color: #2980b9; }
+  .card-green { background: #0d2010; border-color: #27ae60; }
+  .card-red { background: #1e0d0d; border-color: #c0392b; }
+  .summary-card .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #8a9cc0; margin-bottom: 8px; }
+  .summary-card .amount { font-size: 28px; font-weight: 700; }
+  .summary-card .pct { font-size: 13px; color: #8a9cc0; margin-top: 4px; }
+  .summary-card .sub-amount { font-size: 14px; color: #8a9cc0; margin-top: 4px; }
+
+  /* Hypotheses table */
+  .hyp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0; }
+  .hyp-cell { padding: 16px 20px; border-right: 1px solid #2a3a6a; border-bottom: 1px solid #2a3a6a; }
+  .hyp-cell:last-child { border-right: none; }
+  .hyp-cell .hlabel { font-size: 11px; color: #8a9cc0; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  .hyp-cell .hval { font-size: 20px; font-weight: 700; color: #fff; }
+  .hyp-cell .hsub { font-size: 11px; color: #8a9cc0; margin-top: 3px; }
+
+  /* Gain highlight */
+  .gain-box { background: linear-gradient(135deg, #0d2010, #0a1a08); border: 1px solid #27ae60; border-radius: 10px; padding: 20px 24px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .gain-item { text-align: center; }
+  .gain-item .gl { font-size: 11px; color: #8a9cc0; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+  .gain-item .gv { font-size: 22px; font-weight: 700; color: #2ecc71; }
+  .gain-sep { width: 1px; height: 40px; background: #2a3a6a; }
+
+  /* Scenario table highlight */
+  .row-optimal td { background: #0d2010; color: #2ecc71; font-weight: 700; font-size: 14px; }
+  .row-ref td { color: #8a9cc0; font-style: italic; }
+
+  @media (max-width: 700px) {
+    .top-bar { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .params-grid { grid-template-columns: 1fr 1fr; }
+    th, td { padding: 8px 10px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div>
+    <div class="h1" style="font-size:20px;font-weight:700;color:#fff;">Simulation Commissions — Vincent</div>
+    <div class="sub">CA 50 000 € TTC · Closers Will (20 %) & Maurine (10 %) · Setter Déborah (5 %)</div>
+  </div>
+  <div class="badge">v7</div>
+</div>
+
+<div class="container">
+
+  <!-- PARAMS -->
+  <div class="params-card">
+    <div class="params-title">Paramètres</div>
+    <div class="params-grid">
+      <div class="param-field">
+        <label>CA mensuel TTC</label>
+        <input type="number" id="ca" value="50000" oninput="update()">
+        <div class="unit">euros TTC</div>
+      </div>
+      <div class="param-field">
+        <label>Will — Closer</label>
+        <input type="number" id="will_pct" value="20" oninput="update()">
+        <div class="unit">% sur sa part (50 % du CA)</div>
+      </div>
+      <div class="param-field">
+        <label>Maurine — Closer</label>
+        <input type="number" id="maurine_pct" value="10" oninput="update()">
+        <div class="unit">% sur sa part (50 % du CA)</div>
+      </div>
+      <div class="param-field">
+        <label>Déborah — Setter</label>
+        <input type="number" id="deborah_pct" value="5" oninput="update()">
+        <div class="unit">% sur 100 % du CA</div>
+      </div>
+      <div class="param-field">
+        <label>Diététicienne</label>
+        <input type="number" id="diet" value="800" oninput="update()">
+        <div class="unit">€/mois</div>
+      </div>
+      <div class="param-field">
+        <label>ADS</label>
+        <input type="number" id="ads" value="2500" oninput="update()">
+        <div class="unit">€/mois</div>
+      </div>
+      <div class="param-field">
+        <label>iClosed</label>
+        <input type="number" id="iclosed" value="250" oninput="update()">
+        <div class="unit">€/mois</div>
+      </div>
+      <div class="param-field">
+        <label>Logiciels</label>
+        <input type="number" id="logiciels" value="200" oninput="update()">
+        <div class="unit">€/mois</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('hypotheses')">Hypothèses</div>
+    <div class="tab" onclick="showTab('sansimpot')">Sans impôt</div>
+    <div class="tab" onclick="showTab('sas_ttc')">SAS — Com. TTC</div>
+    <div class="tab" onclick="showTab('sas_ht')">SAS — Com. HT</div>
+    <div class="tab" onclick="showTab('comparatif')">Comparatif final</div>
+    <div class="tab" onclick="showTab('dividendes')">Dividendes</div>
+    <div class="tab" onclick="showTab('gain')">Gain combiné</div>
+  </div>
+
+  <!-- PANEL : HYPOTHÈSES -->
+  <div class="panel active" id="p-hypotheses">
+    <div class="section-card">
+      <div class="section-header">
+        <h2>Hypothèses de la simulation</h2>
+        <span class="tag tag-gold">HYPOTHÈSES</span>
+      </div>
+      <div class="hyp-grid" id="hyp-grid">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header"><h2>Équipe commerciale</h2></div>
+      <table>
+        <tr><th>Personne</th><th>Rôle</th><th>Taux</th><th>Base de commission</th><th>Part CA</th></tr>
+        <tr>
+          <td><strong>Will</strong></td><td>Closer</td>
+          <td class="val-gold" id="h-will-pct"></td>
+          <td>Ses propres closings</td><td>50 % du CA</td>
+        </tr>
+        <tr>
+          <td><strong>Maurine</strong></td><td>Closer</td>
+          <td class="val-blue" id="h-maurine-pct"></td>
+          <td>Ses propres closings</td><td>50 % du CA</td>
+        </tr>
+        <tr>
+          <td><strong>Déborah</strong></td><td>Setter</td>
+          <td class="val-pos" id="h-deborah-pct"></td>
+          <td>100 % du CA</td><td>100 % du CA</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header"><h2>Bases de calcul (SAS uniquement — TVA crée la différence TTC / HT)</h2></div>
+      <table>
+        <tr><th></th><th>Base TTC</th><th>Base HT</th><th>TVA incluse (non conservée)</th></tr>
+        <tr><td>CA total</td><td class="mono" id="hb-ca-ttc"></td><td class="mono" id="hb-ca-ht"></td><td class="val-neg mono" id="hb-tva"></td></tr>
+        <tr><td>Part Will (50 %)</td><td class="mono" id="hb-will-ttc"></td><td class="mono" id="hb-will-ht"></td><td class="val-neg mono" id="hb-will-tva"></td></tr>
+        <tr><td>Part Maurine (50 %)</td><td class="mono" id="hb-maurine-ttc"></td><td class="mono" id="hb-maurine-ht"></td><td class="val-neg mono" id="hb-maurine-tva"></td></tr>
+        <tr><td>Base Déborah (100 %)</td><td class="mono" id="hb-deborah-ttc"></td><td class="mono" id="hb-deborah-ht"></td><td class="val-neg mono" id="hb-deborah-tva"></td></tr>
+      </table>
+      <div style="padding:12px 16px;font-size:11px;color:#8a9cc0;font-style:italic;">
+        Sans impôt = pas de TVA → TTC = HT. La distinction TTC / HT n'existe que dans le cadre de la SAS.
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL : SANS IMPÔT -->
+  <div class="panel" id="p-sansimpot">
+    <div class="cards-grid">
+      <div class="summary-card card-gold">
+        <div class="label">Résultat net — Sans impôt</div>
+        <div class="amount" style="color:#f1c40f;" id="si-net-card"></div>
+        <div class="pct" id="si-pct-card"></div>
+        <div class="sub-amount" id="si-annual-card"></div>
+      </div>
+      <div class="summary-card card-blue">
+        <div class="label">Total commissions</div>
+        <div class="amount" style="color:#e67e22;" id="si-com-card"></div>
+        <div class="pct" id="si-com-pct-card"></div>
+      </div>
+      <div class="summary-card card-green" style="background:#0a0f20;border-color:#2a3a6a;">
+        <div class="label">Charges fixes</div>
+        <div class="amount" style="color:#8a9cc0;" id="si-charges-card"></div>
+        <div class="pct" id="si-charges-pct-card"></div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header">
+        <h2>Sans impôt</h2>
+        <span class="tag tag-gold">SANS IMPÔT</span>
+      </div>
+      <div class="section-sub">Pas de TVA, pas d'IS. Vincent garde la totalité du CA. TTC = HT = même chose.</div>
+      <table>
+        <tr><th>Poste</th><th>Calcul détaillé</th><th class="text-right">Montant</th><th class="text-right">% revenu</th><th class="text-right">Marge restante</th></tr>
+        <tr class="row-revenue"><td><strong>Revenu</strong></td><td></td><td class="text-right mono" id="si-revenu"></td><td class="text-right" id="si-revenu-pct"></td><td class="text-right mono" id="si-revenu-marge"></td></tr>
+        <tr class="row-commission"><td>Will — <span id="si-will-lbl"></span></td><td class="val-muted" id="si-will-calc"></td><td class="text-right mono val-neg" id="si-will"></td><td class="text-right" id="si-will-pct2"></td><td class="text-right mono val-muted" id="si-will-marge"></td></tr>
+        <tr class="row-commission"><td>Maurine — <span id="si-maurine-lbl"></span></td><td class="val-muted" id="si-maurine-calc"></td><td class="text-right mono val-neg" id="si-maurine"></td><td class="text-right" id="si-maurine-pct2"></td><td class="text-right mono val-muted" id="si-maurine-marge"></td></tr>
+        <tr class="row-commission"><td>Déborah — <span id="si-deborah-lbl"></span></td><td class="val-muted" id="si-deborah-calc"></td><td class="text-right mono val-neg" id="si-deborah"></td><td class="text-right" id="si-deborah-pct2"></td><td class="text-right mono val-muted" id="si-deborah-marge"></td></tr>
+        <tr class="row-subtotal"><td colspan="2"><strong>Marge après commissions</strong></td><td class="text-right mono" id="si-marge-com"></td><td class="text-right" id="si-marge-com-pct"></td><td></td></tr>
+        <tr class="row-total-com"><td colspan="2"><strong>Total commissions</strong></td><td class="text-right mono val-neg" id="si-total-com"></td><td class="text-right" id="si-total-com-pct"></td><td></td></tr>
+        <tr class="row-charge"><td>Diététicienne</td><td></td><td class="text-right mono val-neg" id="si-diet"></td><td class="text-right" id="si-diet-pct"></td><td></td></tr>
+        <tr class="row-charge"><td>ADS</td><td></td><td class="text-right mono val-neg" id="si-ads"></td><td class="text-right" id="si-ads-pct"></td><td></td></tr>
+        <tr class="row-charge"><td>iClosed</td><td></td><td class="text-right mono val-neg" id="si-iclosed"></td><td class="text-right" id="si-iclosed-pct"></td><td></td></tr>
+        <tr class="row-charge"><td>Logiciels</td><td></td><td class="text-right mono val-neg" id="si-logiciels"></td><td class="text-right" id="si-logiciels-pct"></td><td></td></tr>
+        <tr class="row-total-charges"><td colspan="2"><strong>Total charges fixes</strong></td><td class="text-right mono val-neg" id="si-total-charges"></td><td class="text-right" id="si-total-charges-pct"></td><td></td></tr>
+        <tr class="row-net-dubai"><td colspan="2"><strong>RÉSULTAT NET</strong></td><td class="text-right mono" id="si-net"></td><td class="text-right val-gold" id="si-net-pct"></td><td></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- PANEL : SAS TTC -->
+  <div class="panel" id="p-sas_ttc">
+    <div class="cards-grid">
+      <div class="summary-card card-blue">
+        <div class="label">Net dividendes — SAS com. TTC</div>
+        <div class="amount" style="color:#3498db;" id="sttc-net-card"></div>
+        <div class="pct" id="sttc-pct-card"></div>
+        <div class="sub-amount" id="sttc-annual-card"></div>
+      </div>
+      <div class="summary-card card-red">
+        <div class="label">Perte vs com. HT</div>
+        <div class="amount" style="color:#e74c3c;" id="sttc-perte-card"></div>
+        <div class="sub-amount" id="sttc-perte-annual"></div>
+      </div>
+      <div class="summary-card" style="background:#1a1400;border:1px solid #e67e22;border-radius:10px;padding:20px;">
+        <div class="label">TVA reversée</div>
+        <div class="amount" style="color:#e67e22;" id="sttc-tva-card"></div>
+        <div class="sub-amount" style="color:#8a9cc0;">non conservée par Vincent</div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header">
+        <h2>SAS France — Commissions sur le TTC</h2>
+        <span class="tag tag-blue">SAS · TTC</span>
+      </div>
+      <div class="section-sub">
+        TVA reversée : Vincent conserve le CA HT. Les commissions sont calculées sur les <strong id="sttc-sub-ttc"></strong> TTC.<br>
+        <span class="warning">Problème : Will est payé sur la base TTC alors que Vincent ne conserve que la base HT de cette part.</span>
+      </div>
+      <table>
+        <tr><th>Poste</th><th>Calcul détaillé</th><th class="text-right">Montant</th><th class="text-right">% CA HT</th><th class="text-right">Marge restante</th></tr>
+        <tr class="row-revenue"><td><strong>CA réel (HT)</strong></td><td class="val-muted" id="sttc-ht-calc"></td><td class="text-right mono" id="sttc-ht"></td><td class="text-right">100,0 %</td><td class="text-right mono" id="sttc-ht-marge"></td></tr>
+        <tr class="row-commission"><td>Will — <span id="sttc-will-lbl"></span></td><td class="val-muted" id="sttc-will-calc"></td><td class="text-right mono val-neg" id="sttc-will"></td><td class="text-right" id="sttc-will-pct"></td><td class="text-right mono val-muted" id="sttc-will-marge"></td></tr>
+        <tr class="row-commission"><td>Maurine — <span id="sttc-maurine-lbl"></span></td><td class="val-muted" id="sttc-maurine-calc"></td><td class="text-right mono val-neg" id="sttc-maurine"></td><td class="text-right" id="sttc-maurine-pct"></td><td class="text-right mono val-muted" id="sttc-maurine-marge"></td></tr>
+        <tr class="row-commission"><td>Déborah — <span id="sttc-deborah-lbl"></span></td><td class="val-muted" id="sttc-deborah-calc"></td><td class="text-right mono val-neg" id="sttc-deborah"></td><td class="text-right" id="sttc-deborah-pct"></td><td class="text-right mono val-muted" id="sttc-deborah-marge"></td></tr>
+        <tr class="row-subtotal"><td colspan="2"><strong>Marge après commissions</strong></td><td class="text-right mono" id="sttc-marge-com"></td><td class="text-right" id="sttc-marge-com-pct"></td><td></td></tr>
+        <tr class="row-total-com"><td colspan="2"><strong>Total commissions</strong></td><td class="text-right mono val-neg" id="sttc-total-com"></td><td class="text-right" id="sttc-total-com-pct"></td><td></td></tr>
+        <tr class="row-charge"><td>Diététicienne</td><td></td><td class="text-right mono val-neg" id="sttc-diet"></td><td class="text-right" id="sttc-diet-pct"></td><td></td></tr>
+        <tr class="row-charge"><td>ADS</td><td></td><td class="text-right mono val-neg" id="sttc-ads"></td><td class="text-right" id="sttc-ads-pct"></td><td></td></tr>
+        <tr class="row-charge"><td>iClosed</td><td></td><td class="text-right mono val-neg" id="sttc-iclosed"></td><td class="text-right" id="sttc-iclosed-pct"></td><td></td></tr>
+        <tr class="row-charge"><td>Logiciels</td><td></td><td class="text-right mono val-neg" id="sttc-logiciels"></td><td class="text-right" id="sttc-logiciels-pct"></td><td></td></tr>
+        <tr class="row-total-charges"><td colspan="2"><strong>Total charges fixes</strong></td><td class="text-right mono val-neg" id="sttc-total-charges"></td><td class="text-right" id="sttc-total-charges-pct"></td><td></td></tr>
+        <tr class="row-avant-is"><td colspan="2"><strong>Résultat avant IS</strong></td><td class="text-right mono" id="sttc-avant-is"></td><td class="text-right" id="sttc-avant-is-pct"></td><td></td></tr>
+        <tr class="row-is"><td>IS — 15 %</td><td></td><td class="text-right mono val-neg" id="sttc-is"></td><td class="text-right" id="sttc-is-pct"></td><td></td></tr>
+        <tr class="row-pfu"><td>PFU flat tax — 30 %</td><td></td><td class="text-right mono val-neg" id="sttc-pfu"></td><td class="text-right" id="sttc-pfu-pct"></td><td></td></tr>
+        <tr class="row-net"><td colspan="2"><strong>NET DIVIDENDES</strong></td><td class="text-right mono" id="sttc-net"></td><td class="text-right val-pos" id="sttc-net-pct"></td><td></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- PANEL : SAS HT -->
+  <div class="panel" id="p-sas_ht">
+    <div class="cards-grid">
+      <div class="summary-card card-green">
+        <div class="label">Net dividendes — SAS com. HT</div>
+        <div class="amount" style="color:#2ecc71;" id="sht-net-card"></div>
+        <div class="pct" id="sht-pct-card"></div>
+        <div class="sub-amount" id="sht-annual-card"></div>
+      </div>
+      <div class="summary-card card-gold">
+        <div class="label">Gain vs com. TTC</div>
+        <div class="amount" style="color:#f1c40f;" id="sht-gain-card"></div>
+        <div class="sub-amount" id="sht-gain-annual"></div>
+      </div>
+      <div class="summary-card" style="background:#0a0f20;border:1px solid #2a3a6a;border-radius:10px;padding:20px;">
+        <div class="label">TVA reversée</div>
+        <div class="amount" style="color:#8a9cc0;" id="sht-tva-card"></div>
+        <div class="sub-amount" style="color:#8a9cc0;">non conservée</div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header">
+        <h2>SAS France — Commissions sur le HT</h2>
+        <span class="tag tag-green">SAS · HT</span>
+      </div>
+      <div class="section-sub">TVA reversée : Vincent conserve le CA HT. Les commissions sont calculées sur le HT.<br>
+        Les taux contractuels correspondent exactement au coût réel sur le revenu de Vincent.</div>
+      <table>
+        <tr><th>Poste</th><th>Calcul détaillé</th><th class="text-right">Montant</th><th class="text-right">% CA HT</th><th class="text-right">Marge restante</th></tr>
+        <tr class="row-revenue"><td><strong>CA réel (HT)</strong></td><td class="val-muted" id="sht-ht-calc"></td><td class="text-right mono" id="sht-ht"></td><td class="text-right">100,0 %</td><td class="text-right mono" id="sht-ht-marge"></td></tr>
+        <tr class="row-commission"><td>Will — <span id="sht-will-lbl"></span></td><td class="val-muted" id="sht-will-calc"></td><td class="text-right mono val-neg" id="sht-will"></td><td class="text-right" id="sht-will-pct"></td><td class="text-right mono val-muted" id="sht-will-marge"></td></tr>
+        <tr class="row-commission"><td>Maurine — <span id="sht-maurine-lbl"></span></td><td class="val-muted" id="sht-maurine-calc"></td><td class="text-right mono val-neg" id="sht-maurine"></td><td class="text-right" id="sht-maurine-pct"></td><td class="text-right mono val-muted" id="sht-maurine-marge"></td></tr>
+        <tr class="row-commission"><td>Déborah — <span id="sht-deborah-lbl"></span></td><td class="val-muted" id="sht-deborah-calc"></td><td class="text-right mono val-neg" id="sht-deborah"></td><td class="text-right" id="sht-deborah-pct"></td><td class="text-right mono val-muted" id="sht-deborah-marge"></td></tr>
+        <tr class="row-subtotal"><td colspan="2"><strong>Marge après commissions</strong></td><td class="text-right mono" id="sht-marge-com"></td><td class="text-right" id="sht-marge-com-pct"></td><td></td></tr>
+        <tr class="row-total-com"><td colspan="2"><strong>Total commissions</strong></td><td class="text-right mono val-neg" id="sht-total-com"></td><td class="text-right" id="sht-total-com-pct"></td><td></td></tr>
+        <tr class="row-charge"><td>Diététicienne</td><td></td><td class="text-right mono val-neg" id="sht-diet"></td><td class="text-right" id="sht-diet-pct"></td><td></td></tr>
+        <tr class="row-charge"><td>ADS</td><td></td><td class="text-right mono val-neg" id="sht-ads"></td><td class="text-right" id="sht-ads-pct"></td><td></td></tr>
+        <tr class="row-charge"><td>iClosed</td><td></td><td class="text-right mono val-neg" id="sht-iclosed"></td><td class="text-right" id="sht-iclosed-pct"></td><td></td></tr>
+        <tr class="row-charge"><td>Logiciels</td><td></td><td class="text-right mono val-neg" id="sht-logiciels"></td><td class="text-right" id="sht-logiciels-pct"></td><td></td></tr>
+        <tr class="row-total-charges"><td colspan="2"><strong>Total charges fixes</strong></td><td class="text-right mono val-neg" id="sht-total-charges"></td><td class="text-right" id="sht-total-charges-pct"></td><td></td></tr>
+        <tr class="row-avant-is"><td colspan="2"><strong>Résultat avant IS</strong></td><td class="text-right mono" id="sht-avant-is"></td><td class="text-right" id="sht-avant-is-pct"></td><td></td></tr>
+        <tr class="row-is"><td>IS — 15 %</td><td></td><td class="text-right mono val-neg" id="sht-is"></td><td class="text-right" id="sht-is-pct"></td><td></td></tr>
+        <tr class="row-pfu"><td>PFU flat tax — 30 %</td><td></td><td class="text-right mono val-neg" id="sht-pfu"></td><td class="text-right" id="sht-pfu-pct"></td><td></td></tr>
+        <tr class="row-net"><td colspan="2"><strong>NET DIVIDENDES</strong></td><td class="text-right mono" id="sht-net"></td><td class="text-right val-pos" id="sht-net-pct"></td><td></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- PANEL : COMPARATIF -->
+  <div class="panel" id="p-comparatif">
+    <div class="cards-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div class="summary-card card-gold">
+        <div class="label">Sans impôt</div>
+        <div class="amount" style="color:#f1c40f;" id="cmp-si-card"></div>
+        <div class="pct" id="cmp-si-pct"></div>
+        <div class="sub-amount" id="cmp-si-annual"></div>
+      </div>
+      <div class="summary-card card-green">
+        <div class="label">SAS — Com. HT</div>
+        <div class="amount" style="color:#2ecc71;" id="cmp-ht-card"></div>
+        <div class="pct" id="cmp-ht-pct"></div>
+        <div class="sub-amount" id="cmp-ht-annual"></div>
+      </div>
+      <div class="summary-card card-blue">
+        <div class="label">SAS — Com. TTC</div>
+        <div class="amount" style="color:#3498db;" id="cmp-ttc-card"></div>
+        <div class="pct" id="cmp-ttc-pct"></div>
+        <div class="sub-amount" id="cmp-ttc-annual"></div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header">
+        <h2>Comparatif final — Résultats côte à côte (mensuel)</h2>
+        <span class="tag tag-purple">SYNTHÈSE</span>
+      </div>
+      <table>
+        <tr><th>Poste</th><th class="text-right">Sans impôt</th><th class="text-right">SAS — Com. HT</th><th class="text-right">SAS — Com. TTC</th><th class="text-right">Perte TTC vs HT</th></tr>
+        <tr><td>Revenu de base</td><td class="text-right mono val-gold" id="cmp-r-si"></td><td class="text-right mono val-muted" id="cmp-r-ht"></td><td class="text-right mono val-muted" id="cmp-r-ttc"></td><td class="text-right val-muted">—</td></tr>
+        <tr><td>TVA reversée</td><td class="text-right val-muted">—</td><td class="text-right mono val-neg" id="cmp-tva-ht"></td><td class="text-right mono val-neg" id="cmp-tva-ttc"></td><td class="text-right val-muted">—</td></tr>
+        <tr><td>Total commissions</td><td class="text-right mono val-neg" id="cmp-com-si"></td><td class="text-right mono val-neg" id="cmp-com-ht"></td><td class="text-right mono val-neg" id="cmp-com-ttc"></td><td class="text-right mono val-neg" id="cmp-com-diff"></td></tr>
+        <tr><td>Charges fixes</td><td class="text-right mono val-neg" id="cmp-chg-si"></td><td class="text-right mono val-neg" id="cmp-chg-ht"></td><td class="text-right mono val-neg" id="cmp-chg-ttc"></td><td class="text-right val-muted">—</td></tr>
+        <tr class="row-avant-is"><td><strong>Résultat avant IS</strong></td><td class="text-right mono val-gold" id="cmp-avantis-si"></td><td class="text-right mono" id="cmp-avantis-ht"></td><td class="text-right mono" id="cmp-avantis-ttc"></td><td class="text-right mono val-neg" id="cmp-avantis-diff"></td></tr>
+        <tr class="row-is"><td>IS 15 %</td><td class="text-right val-muted">—</td><td class="text-right mono val-neg" id="cmp-is-ht"></td><td class="text-right mono val-neg" id="cmp-is-ttc"></td><td class="text-right val-muted">—</td></tr>
+        <tr class="row-pfu"><td>PFU 30 %</td><td class="text-right val-muted">—</td><td class="text-right mono val-neg" id="cmp-pfu-ht"></td><td class="text-right mono val-neg" id="cmp-pfu-ttc"></td><td class="text-right val-muted">—</td></tr>
+        <tr class="row-net-dubai"><td><strong>NET DIRIGEANT</strong></td><td class="text-right mono val-gold" id="cmp-net-si"></td><td class="text-right mono val-pos" id="cmp-net-ht"></td><td class="text-right mono" style="color:#3498db;" id="cmp-net-ttc"></td><td class="text-right mono val-neg" id="cmp-net-diff"></td></tr>
+        <tr style="background:#0a0f20;"><td>% du revenu</td><td class="text-right val-gold" id="cmp-pct-si"></td><td class="text-right val-pos" id="cmp-pct-ht"></td><td class="text-right" style="color:#3498db;" id="cmp-pct-ttc"></td><td></td></tr>
+      </table>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header"><h2>Perte annuelle (SAS) — commissions TTC vs HT</h2></div>
+      <table>
+        <tr><th>Structure</th><th class="text-right">Net com. HT / mois</th><th class="text-right">Net com. HT / an</th><th class="text-right">Net com. TTC / mois</th><th class="text-right">Net com. TTC / an</th><th class="text-right">Perte / mois</th><th class="text-right">Perte / an</th></tr>
+        <tr><td>Sans impôt</td><td class="text-right mono val-gold" id="pa-si-mois"></td><td class="text-right mono val-gold" id="pa-si-an"></td><td class="text-right val-muted" colspan="2">N/A — TTC = HT</td><td class="text-right val-muted">—</td><td class="text-right val-muted">—</td></tr>
+        <tr class="row-avant-is"><td>SAS France</td><td class="text-right mono val-pos" id="pa-ht-mois"></td><td class="text-right mono val-pos" id="pa-ht-an"></td><td class="text-right mono" style="color:#3498db;" id="pa-ttc-mois"></td><td class="text-right mono" style="color:#3498db;" id="pa-ttc-an"></td><td class="text-right mono val-neg" id="pa-perte-mois"></td><td class="text-right mono val-neg" id="pa-perte-an"></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- PANEL : DIVIDENDES -->
+  <div class="panel" id="p-dividendes">
+    <div class="gain-box" style="margin-bottom:20px;" id="div-summary-box">
+      <!-- filled by JS -->
+    </div>
+
+    <div class="section-card">
+      <div class="section-header">
+        <h2>Détail du calcul des dividendes</h2>
+        <span class="tag tag-green">DIVIDENDES</span>
+      </div>
+      <div class="section-sub">SAS France · IS 15 % · PFU 30 % · 100 % dividendes · Aucun salaire</div>
+      <table>
+        <tr><th>Étape</th><th class="text-right">Com. sur HT</th><th class="text-right">% CA HT</th><th class="text-right">Com. sur TTC</th><th class="text-right">% CA HT</th></tr>
+        <tr class="row-revenue"><td><strong>CA réel (HT)</strong></td><td class="text-right mono" id="dv-ht-ht"></td><td class="text-right">100,0 %</td><td class="text-right mono" id="dv-ttc-ht"></td><td class="text-right">100,0 %</td></tr>
+        <tr class="row-commission"><td>– Commissions</td><td class="text-right mono val-neg" id="dv-ht-com"></td><td class="text-right" id="dv-ht-com-pct"></td><td class="text-right mono val-neg" id="dv-ttc-com"></td><td class="text-right" id="dv-ttc-com-pct"></td></tr>
+        <tr class="row-charge"><td>– Charges fixes</td><td class="text-right mono val-neg" id="dv-ht-chg"></td><td class="text-right" id="dv-ht-chg-pct"></td><td class="text-right mono val-neg" id="dv-ttc-chg"></td><td class="text-right" id="dv-ttc-chg-pct"></td></tr>
+        <tr class="row-avant-is"><td><strong>= Résultat avant IS</strong></td><td class="text-right mono" id="dv-ht-avantis"></td><td class="text-right" id="dv-ht-avantis-pct"></td><td class="text-right mono" id="dv-ttc-avantis"></td><td class="text-right" id="dv-ttc-avantis-pct"></td></tr>
+        <tr class="row-is"><td>– IS 15 %</td><td class="text-right mono val-neg" id="dv-ht-is"></td><td class="text-right" id="dv-ht-is-pct"></td><td class="text-right mono val-neg" id="dv-ttc-is"></td><td class="text-right" id="dv-ttc-is-pct"></td></tr>
+        <tr><td>= Résultat après IS</td><td class="text-right mono" id="dv-ht-apres"></td><td class="text-right" id="dv-ht-apres-pct"></td><td class="text-right mono" id="dv-ttc-apres"></td><td class="text-right" id="dv-ttc-apres-pct"></td></tr>
+        <tr class="row-pfu"><td>– PFU flat tax 30 %</td><td class="text-right mono val-neg" id="dv-ht-pfu"></td><td class="text-right" id="dv-ht-pfu-pct"></td><td class="text-right mono val-neg" id="dv-ttc-pfu"></td><td class="text-right" id="dv-ttc-pfu-pct"></td></tr>
+        <tr class="row-net"><td><strong>= NET DIVIDENDES</strong></td><td class="text-right mono val-pos" id="dv-ht-net"></td><td class="text-right val-pos" id="dv-ht-net-pct"></td><td class="text-right mono" style="color:#3498db;" id="dv-ttc-net"></td><td class="text-right" style="color:#3498db;" id="dv-ttc-net-pct"></td></tr>
+      </table>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header"><h2>Gain potentiel — Si Will passe de <span id="dv-will-from"></span> à 10 %</h2></div>
+      <table>
+        <tr><th>Scénario</th><th class="text-right">Com. sur HT</th><th class="text-right">Com. sur TTC</th></tr>
+        <tr><td>Will à <span id="dv-will-current-lbl"></span> (situation actuelle)</td><td class="text-right mono" id="dv-w-cur-ht"></td><td class="text-right mono" id="dv-w-cur-ttc"></td></tr>
+        <tr class="row-avant-is"><td>Will à 10 % (hypothèse)</td><td class="text-right mono val-pos" id="dv-w-10-ht"></td><td class="text-right mono val-pos" id="dv-w-10-ttc"></td></tr>
+        <tr class="row-net"><td><strong>Gain mensuel</strong></td><td class="text-right mono val-pos" id="dv-w-gain-ht-mois"></td><td class="text-right mono val-pos" id="dv-w-gain-ttc-mois"></td></tr>
+        <tr class="row-net"><td><strong>Gain annuel</strong></td><td class="text-right mono val-pos" id="dv-w-gain-ht-an"></td><td class="text-right mono val-pos" id="dv-w-gain-ttc-an"></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- PANEL : GAIN COMBINÉ -->
+  <div class="panel" id="p-gain">
+    <div class="gain-box" style="margin-bottom:20px;">
+      <div class="gain-item"><div class="gl">Gain combiné mensuel</div><div class="gv" id="gc-mois"></div></div>
+      <div class="gain-sep"></div>
+      <div class="gain-item"><div class="gl">Gain combiné annuel</div><div class="gv" id="gc-an"></div></div>
+      <div class="gain-sep"></div>
+      <div class="gain-item"><div class="gl">Amélioration marge</div><div class="gv" id="gc-pct"></div></div>
+      <div class="gain-sep"></div>
+      <div class="gain-item"><div class="gl">Marge nette optimisée</div><div class="gv" id="gc-marge-finale"></div></div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header">
+        <h2>Comparatif détaillé — 4 scénarios côte à côte</h2>
+        <span class="tag tag-green">SITUATION OPTIMALE</span>
+      </div>
+      <table>
+        <tr>
+          <th>Poste</th>
+          <th class="text-right" style="color:#8a9cc0;">Actuel<br><small>Will <span id="gc-col-will-cur"></span> · TTC</small></th>
+          <th class="text-right" style="color:#3498db;">Levier 1<br><small>Base HT, Will inchangé</small></th>
+          <th class="text-right" style="color:#e67e22;">Levier 2<br><small>Will 10 %, base TTC</small></th>
+          <th class="text-right" style="color:#2ecc71;">Combiné ★<br><small>Will 10 % + base HT</small></th>
+        </tr>
+        <tr class="row-revenue">
+          <td><strong>CA réel (HT)</strong></td>
+          <td class="text-right mono val-muted" id="gc-r-caht-ref"></td>
+          <td class="text-right mono val-muted" id="gc-r-caht-l1"></td>
+          <td class="text-right mono val-muted" id="gc-r-caht-l2"></td>
+          <td class="text-right mono val-muted" id="gc-r-caht-comb"></td>
+        </tr>
+        <tr class="row-commission">
+          <td>Will — commission</td>
+          <td class="text-right mono val-neg" id="gc-r-will-ref"></td>
+          <td class="text-right mono val-neg" id="gc-r-will-l1"></td>
+          <td class="text-right mono val-neg" id="gc-r-will-l2"></td>
+          <td class="text-right mono val-neg" id="gc-r-will-comb"></td>
+        </tr>
+        <tr class="row-commission">
+          <td>Maurine — <span id="gc-col-maurine-pct"></span> (closeuse)</td>
+          <td class="text-right mono val-neg" id="gc-r-maurine-ref"></td>
+          <td class="text-right mono val-neg" id="gc-r-maurine-l1"></td>
+          <td class="text-right mono val-neg" id="gc-r-maurine-l2"></td>
+          <td class="text-right mono val-neg" id="gc-r-maurine-comb"></td>
+        </tr>
+        <tr class="row-commission">
+          <td>Déborah — <span id="gc-col-deborah-pct"></span> (setteuse)</td>
+          <td class="text-right mono val-neg" id="gc-r-deborah-ref"></td>
+          <td class="text-right mono val-neg" id="gc-r-deborah-l1"></td>
+          <td class="text-right mono val-neg" id="gc-r-deborah-l2"></td>
+          <td class="text-right mono val-neg" id="gc-r-deborah-comb"></td>
+        </tr>
+        <tr class="row-total-com">
+          <td><strong>Total commissions</strong></td>
+          <td class="text-right mono val-neg" id="gc-r-totcom-ref"></td>
+          <td class="text-right mono val-neg" id="gc-r-totcom-l1"></td>
+          <td class="text-right mono val-neg" id="gc-r-totcom-l2"></td>
+          <td class="text-right mono val-neg" id="gc-r-totcom-comb"></td>
+        </tr>
+        <tr class="row-charge">
+          <td>Charges fixes</td>
+          <td class="text-right mono val-neg" id="gc-r-chg-ref"></td>
+          <td class="text-right mono val-neg" id="gc-r-chg-l1"></td>
+          <td class="text-right mono val-neg" id="gc-r-chg-l2"></td>
+          <td class="text-right mono val-neg" id="gc-r-chg-comb"></td>
+        </tr>
+        <tr class="row-avant-is">
+          <td><strong>Résultat avant IS</strong></td>
+          <td class="text-right mono" id="gc-r-avis-ref"></td>
+          <td class="text-right mono" id="gc-r-avis-l1"></td>
+          <td class="text-right mono" id="gc-r-avis-l2"></td>
+          <td class="text-right mono" id="gc-r-avis-comb"></td>
+        </tr>
+        <tr class="row-is">
+          <td>IS 15 %</td>
+          <td class="text-right mono val-neg" id="gc-r-is-ref"></td>
+          <td class="text-right mono val-neg" id="gc-r-is-l1"></td>
+          <td class="text-right mono val-neg" id="gc-r-is-l2"></td>
+          <td class="text-right mono val-neg" id="gc-r-is-comb"></td>
+        </tr>
+        <tr class="row-pfu">
+          <td>PFU 30 %</td>
+          <td class="text-right mono val-neg" id="gc-r-pfu-ref"></td>
+          <td class="text-right mono val-neg" id="gc-r-pfu-l1"></td>
+          <td class="text-right mono val-neg" id="gc-r-pfu-l2"></td>
+          <td class="text-right mono val-neg" id="gc-r-pfu-comb"></td>
+        </tr>
+        <tr class="row-net">
+          <td><strong>NET DIVIDENDES / mois</strong></td>
+          <td class="text-right mono val-muted" id="gc-r-net-ref"></td>
+          <td class="text-right mono" style="color:#3498db;" id="gc-r-net-l1"></td>
+          <td class="text-right mono" style="color:#e67e22;" id="gc-r-net-l2"></td>
+          <td class="text-right mono val-pos" id="gc-r-net-comb"></td>
+        </tr>
+        <tr style="background:#0a0f20;">
+          <td>% du CA HT</td>
+          <td class="text-right val-muted" id="gc-r-pct-ref"></td>
+          <td class="text-right" style="color:#3498db;" id="gc-r-pct-l1"></td>
+          <td class="text-right" style="color:#e67e22;" id="gc-r-pct-l2"></td>
+          <td class="text-right val-pos" id="gc-r-pct-comb"></td>
+        </tr>
+        <tr style="background:#061208;border-top:2px solid #27ae60;">
+          <td style="color:#8a9cc0;font-size:12px;"><strong>Gain vs actuel / mois</strong></td>
+          <td class="text-right val-muted">—</td>
+          <td class="text-right val-pos" id="gc-r-gain-l1"></td>
+          <td class="text-right val-pos" id="gc-r-gain-l2"></td>
+          <td class="text-right val-pos" style="font-weight:700;font-size:14px;" id="gc-r-gain-comb"></td>
+        </tr>
+        <tr style="background:#061208;">
+          <td style="color:#8a9cc0;font-size:12px;"><strong>Gain vs actuel / an</strong></td>
+          <td class="text-right val-muted">—</td>
+          <td class="text-right val-pos" id="gc-r-gainy-l1"></td>
+          <td class="text-right val-pos" id="gc-r-gainy-l2"></td>
+          <td class="text-right val-pos" style="font-weight:700;font-size:14px;" id="gc-r-gainy-comb"></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section-card" style="margin-top:20px;">
+      <div class="section-header">
+        <h2>Sans impôt — type Dubai (0 % IS · 0 % dividendes · pas de TVA)</h2>
+        <span class="tag tag-gold">DUBAI</span>
+      </div>
+      <div class="section-sub">TTC = HT = même base. Pas de TVA, pas d'IS, pas de PFU. Vincent garde 100 % du net après commissions et charges.</div>
+      <table>
+        <tr>
+          <th>Poste</th>
+          <th class="text-right" style="color:#8a9cc0;">Actuel<br><small>Will <span id="gc-d-will-cur"></span></small></th>
+          <th class="text-right" style="color:#e67e22;">Will → 10 %</th>
+          <th class="text-right" style="color:#f1c40f;">Gain</th>
+        </tr>
+        <tr class="row-revenue">
+          <td><strong>CA (TTC = HT)</strong></td>
+          <td class="text-right mono val-muted" id="gc-d-ca-ref"></td>
+          <td class="text-right mono val-muted" id="gc-d-ca-w10"></td>
+          <td></td>
+        </tr>
+        <tr class="row-commission">
+          <td>Will — <span id="gc-d-will-lbl-ref"></span></td>
+          <td class="text-right mono val-neg" id="gc-d-will-ref"></td>
+          <td class="text-right mono val-neg" id="gc-d-will-w10"></td>
+          <td class="text-right mono val-pos" id="gc-d-will-gain"></td>
+        </tr>
+        <tr class="row-commission">
+          <td>Maurine — <span id="gc-d-maurine-lbl"></span> (closeuse)</td>
+          <td class="text-right mono val-neg" id="gc-d-maurine-ref"></td>
+          <td class="text-right mono val-neg" id="gc-d-maurine-w10"></td>
+          <td class="text-right val-muted">—</td>
+        </tr>
+        <tr class="row-commission">
+          <td>Déborah — <span id="gc-d-deborah-lbl"></span> (setteuse)</td>
+          <td class="text-right mono val-neg" id="gc-d-deborah-ref"></td>
+          <td class="text-right mono val-neg" id="gc-d-deborah-w10"></td>
+          <td class="text-right val-muted">—</td>
+        </tr>
+        <tr class="row-total-com">
+          <td><strong>Total commissions</strong></td>
+          <td class="text-right mono val-neg" id="gc-d-totcom-ref"></td>
+          <td class="text-right mono val-neg" id="gc-d-totcom-w10"></td>
+          <td class="text-right mono val-pos" id="gc-d-totcom-gain"></td>
+        </tr>
+        <tr class="row-charge">
+          <td>Charges fixes</td>
+          <td class="text-right mono val-neg" id="gc-d-chg-ref"></td>
+          <td class="text-right mono val-neg" id="gc-d-chg-w10"></td>
+          <td class="text-right val-muted">—</td>
+        </tr>
+        <tr style="background:#1a1400;">
+          <td style="color:#f1c40f;font-size:11px;font-weight:700;letter-spacing:.5px;">PAS D'IS · PAS DE PFU · PAS DE TVA</td>
+          <td class="text-right" style="color:#8a9cc0;font-size:11px;">0 €</td>
+          <td class="text-right" style="color:#8a9cc0;font-size:11px;">0 €</td>
+          <td></td>
+        </tr>
+        <tr class="row-net-dubai">
+          <td><strong>RÉSULTAT NET / mois</strong></td>
+          <td class="text-right mono val-gold" id="gc-d-net-ref"></td>
+          <td class="text-right mono val-gold" id="gc-d-net-w10"></td>
+          <td class="text-right mono" style="color:#f1c40f;font-weight:700;" id="gc-d-net-gain"></td>
+        </tr>
+        <tr style="background:#0a0f20;">
+          <td>% du CA</td>
+          <td class="text-right val-gold" id="gc-d-pct-ref"></td>
+          <td class="text-right val-gold" id="gc-d-pct-w10"></td>
+          <td></td>
+        </tr>
+        <tr style="background:#0a0f20;">
+          <td>Résultat annuel</td>
+          <td class="text-right mono val-gold" id="gc-d-annual-ref"></td>
+          <td class="text-right mono val-gold" id="gc-d-annual-w10"></td>
+          <td class="text-right mono" style="color:#f1c40f;font-weight:700;" id="gc-d-annual-gain"></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const fmt = (n) => n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+const fmtS = (n, sign=true) => (sign && n>0 ? '+' : '') + n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+const pct = (n, base) => (n/base*100).toFixed(1) + ' %';
+const set = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i)=>{ t.classList.remove('active'); });
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const tabs = ['hypotheses','sansimpot','sas_ttc','sas_ht','comparatif','dividendes','gain'];
+  document.querySelectorAll('.tab')[tabs.indexOf(name)].classList.add('active');
+  document.getElementById('p-'+name).classList.add('active');
+}
+
+function update() {
+  const ca = parseFloat(document.getElementById('ca').value)||50000;
+  const willPct = parseFloat(document.getElementById('will_pct').value)||20;
+  const maurinePct = parseFloat(document.getElementById('maurine_pct').value)||10;
+  const deborahPct = parseFloat(document.getElementById('deborah_pct').value)||5;
+  const diet = parseFloat(document.getElementById('diet').value)||800;
+  const ads = parseFloat(document.getElementById('ads').value)||2500;
+  const iclosed = parseFloat(document.getElementById('iclosed').value)||250;
+  const logiciels = parseFloat(document.getElementById('logiciels').value)||200;
+
+  const tva = ca / 1.2 * 0.2; // TVA 20%
+  const caHT = ca - tva;
+  const charges = diet + ads + iclosed + logiciels;
+
+  // Commission bases
+  const willBase_ttc = ca * 0.5;
+  const maurineBase_ttc = ca * 0.5;
+  const deborahBase_ttc = ca;
+  const willBase_ht = caHT * 0.5;
+  const maurineBase_ht = caHT * 0.5;
+  const deborahBase_ht = caHT;
+
+  // Commissions TTC
+  const willCom_ttc = willBase_ttc * willPct/100;
+  const maurineCom_ttc = maurineBase_ttc * maurinePct/100;
+  const deborahCom_ttc = deborahBase_ttc * deborahPct/100;
+  const totalCom_ttc = willCom_ttc + maurineCom_ttc + deborahCom_ttc;
+
+  // Commissions HT
+  const willCom_ht = willBase_ht * willPct/100;
+  const maurineCom_ht = maurineBase_ht * maurinePct/100;
+  const deborahCom_ht = deborahBase_ht * deborahPct/100;
+  const totalCom_ht = willCom_ht + maurineCom_ht + deborahCom_ht;
+
+  // Sans impôt
+  const si_margeApres = ca - totalCom_ttc;
+  const si_net = ca - totalCom_ttc - charges;
+
+  // SAS TTC
+  const sttc_margeApres = caHT - totalCom_ttc;
+  const sttc_avantIS = caHT - totalCom_ttc - charges;
+  const sttc_is = sttc_avantIS * 0.15;
+  const sttc_apresIS = sttc_avantIS - sttc_is;
+  const sttc_pfu = sttc_apresIS * 0.30;
+  const sttc_net = sttc_apresIS - sttc_pfu;
+
+  // SAS HT
+  const sht_margeApres = caHT - totalCom_ht;
+  const sht_avantIS = caHT - totalCom_ht - charges;
+  const sht_is = sht_avantIS * 0.15;
+  const sht_apresIS = sht_avantIS - sht_is;
+  const sht_pfu = sht_apresIS * 0.30;
+  const sht_net = sht_apresIS - sht_pfu;
+
+  // Will à 10%
+  const willCom10_ht = willBase_ht * 0.10;
+  const willCom10_ttc = willBase_ttc * 0.10;
+  const totalCom10_ht = willCom10_ht + maurineCom_ht + deborahCom_ht;
+  const totalCom10_ttc = willCom10_ttc + maurineCom_ttc + deborahCom_ttc;
+
+  const w10_ht_avIS = caHT - totalCom10_ht - charges;
+  const w10_ht_IS = w10_ht_avIS * 0.15;
+  const w10_ht_net = (w10_ht_avIS - w10_ht_IS) * 0.70;
+
+  const w10_ttc_avIS = caHT - totalCom10_ttc - charges;
+  const w10_ttc_IS = w10_ttc_avIS * 0.15;
+  const w10_ttc_net = (w10_ttc_avIS - w10_ttc_IS) * 0.70;
+
+  // Gain combiné
+  const gc_ref = sttc_net;
+  const gc_l1 = sht_net;
+  const gc_l2_avIS = caHT - totalCom10_ttc - charges;
+  const gc_l2 = (gc_l2_avIS - gc_l2_avIS*0.15) * 0.70;
+  const gc_comb = w10_ht_net;
+
+  // ── HYPOTHÈSES ──
+  document.getElementById('hyp-grid').innerHTML = `
+    <div class="hyp-cell"><div class="hlabel">CA mensuel TTC</div><div class="hval">${fmt(ca)}</div></div>
+    <div class="hyp-cell"><div class="hlabel">CA HT (SAS uniquement)</div><div class="hval" style="color:#e67e22;">${fmt(caHT)}</div></div>
+    <div class="hyp-cell"><div class="hlabel">TVA reversée (SAS)</div><div class="hval" style="color:#e74c3c;">${fmt(tva)}</div></div>
+    <div class="hyp-cell"><div class="hlabel">Charges fixes</div><div class="hval" style="color:#8a9cc0;">${fmt(charges)}</div></div>
+  `;
+  set('h-will-pct', willPct + ' %');
+  set('h-maurine-pct', maurinePct + ' %');
+  set('h-deborah-pct', deborahPct + ' %');
+  set('hb-ca-ttc', fmt(ca)); set('hb-ca-ht', fmt(caHT)); set('hb-tva', fmt(tva));
+  set('hb-will-ttc', fmt(ca*0.5)); set('hb-will-ht', fmt(caHT*0.5)); set('hb-will-tva', fmt(ca*0.5-caHT*0.5));
+  set('hb-maurine-ttc', fmt(ca*0.5)); set('hb-maurine-ht', fmt(caHT*0.5)); set('hb-maurine-tva', fmt(ca*0.5-caHT*0.5));
+  set('hb-deborah-ttc', fmt(ca)); set('hb-deborah-ht', fmt(caHT)); set('hb-deborah-tva', fmt(tva));
+
+  // ── SANS IMPÔT ──
+  set('si-net-card', fmt(si_net)); set('si-pct-card', pct(si_net,ca) + ' du CA TTC');
+  set('si-annual-card', fmt(si_net*12) + ' / an');
+  set('si-com-card', fmt(totalCom_ttc)); set('si-com-pct-card', pct(totalCom_ttc,ca) + ' du CA');
+  set('si-charges-card', fmt(charges)); set('si-charges-pct-card', pct(charges,ca) + ' du CA');
+  set('si-will-lbl', willPct+' %'); set('si-will-calc', willPct+'% × '+fmt(willBase_ttc)); set('si-will', '– '+fmt(willCom_ttc)); set('si-will-pct2', pct(willCom_ttc,ca)); set('si-will-marge', fmt(ca-willCom_ttc));
+  set('si-maurine-lbl', maurinePct+' %'); set('si-maurine-calc', maurinePct+'% × '+fmt(maurineBase_ttc)); set('si-maurine', '– '+fmt(maurineCom_ttc)); set('si-maurine-pct2', pct(maurineCom_ttc,ca)); set('si-maurine-marge', fmt(ca-willCom_ttc-maurineCom_ttc));
+  set('si-deborah-lbl', deborahPct+' %'); set('si-deborah-calc', deborahPct+'% × '+fmt(deborahBase_ttc)); set('si-deborah', '– '+fmt(deborahCom_ttc)); set('si-deborah-pct2', pct(deborahCom_ttc,ca)); set('si-deborah-marge', fmt(si_margeApres));
+  set('si-marge-com', fmt(si_margeApres)); set('si-marge-com-pct', pct(si_margeApres,ca));
+  set('si-total-com', '– '+fmt(totalCom_ttc)); set('si-total-com-pct', pct(totalCom_ttc,ca));
+  set('si-diet','– '+fmt(diet)); set('si-diet-pct',pct(diet,ca));
+  set('si-ads','– '+fmt(ads)); set('si-ads-pct',pct(ads,ca));
+  set('si-iclosed','– '+fmt(iclosed)); set('si-iclosed-pct',pct(iclosed,ca));
+  set('si-logiciels','– '+fmt(logiciels)); set('si-logiciels-pct',pct(logiciels,ca));
+  set('si-total-charges','– '+fmt(charges)); set('si-total-charges-pct',pct(charges,ca));
+  set('si-revenu', fmt(ca)); set('si-revenu-pct','100,0 %'); set('si-revenu-marge', fmt(ca));
+  set('si-net', fmt(si_net)); set('si-net-pct', pct(si_net,ca));
+
+  // ── SAS TTC ──
+  set('sttc-net-card', fmt(sttc_net)); set('sttc-pct-card', pct(sttc_net,caHT) + ' du CA HT');
+  set('sttc-annual-card', fmt(sttc_net*12) + ' / an');
+  set('sttc-tva-card', fmt(tva));
+  set('sttc-perte-card', '– '+fmt(sht_net-sttc_net)+' /mois'); set('sttc-perte-annual', '– '+fmt((sht_net-sttc_net)*12)+' /an');
+  set('sttc-sub-ttc', fmt(ca));
+  set('sttc-ht-calc', fmt(ca)+' TTC − '+fmt(tva)+' TVA'); set('sttc-ht', fmt(caHT)); set('sttc-ht-marge', fmt(caHT));
+  set('sttc-will-lbl', willPct+' %'); set('sttc-will-calc', willPct+'% × '+fmt(willBase_ttc)+' TTC'); set('sttc-will','– '+fmt(willCom_ttc)); set('sttc-will-pct', pct(willCom_ttc,caHT)); set('sttc-will-marge', fmt(caHT-willCom_ttc));
+  set('sttc-maurine-lbl', maurinePct+' %'); set('sttc-maurine-calc', maurinePct+'% × '+fmt(maurineBase_ttc)+' TTC'); set('sttc-maurine','– '+fmt(maurineCom_ttc)); set('sttc-maurine-pct', pct(maurineCom_ttc,caHT)); set('sttc-maurine-marge', fmt(caHT-willCom_ttc-maurineCom_ttc));
+  set('sttc-deborah-lbl', deborahPct+' %'); set('sttc-deborah-calc', deborahPct+'% × '+fmt(deborahBase_ttc)+' TTC'); set('sttc-deborah','– '+fmt(deborahCom_ttc)); set('sttc-deborah-pct', pct(deborahCom_ttc,caHT)); set('sttc-deborah-marge', fmt(sttc_margeApres));
+  set('sttc-marge-com', fmt(sttc_margeApres)); set('sttc-marge-com-pct', pct(sttc_margeApres,caHT));
+  set('sttc-total-com','– '+fmt(totalCom_ttc)); set('sttc-total-com-pct', pct(totalCom_ttc,caHT));
+  set('sttc-diet','– '+fmt(diet)); set('sttc-diet-pct',pct(diet,caHT));
+  set('sttc-ads','– '+fmt(ads)); set('sttc-ads-pct',pct(ads,caHT));
+  set('sttc-iclosed','– '+fmt(iclosed)); set('sttc-iclosed-pct',pct(iclosed,caHT));
+  set('sttc-logiciels','– '+fmt(logiciels)); set('sttc-logiciels-pct',pct(logiciels,caHT));
+  set('sttc-total-charges','– '+fmt(charges)); set('sttc-total-charges-pct', pct(charges,caHT));
+  set('sttc-avant-is', fmt(sttc_avantIS)); set('sttc-avant-is-pct', pct(sttc_avantIS,caHT));
+  set('sttc-is','– '+fmt(sttc_is)); set('sttc-is-pct', pct(sttc_is,caHT));
+  set('sttc-pfu','– '+fmt(sttc_pfu)); set('sttc-pfu-pct', pct(sttc_pfu,caHT));
+  set('sttc-net', fmt(sttc_net)); set('sttc-net-pct', pct(sttc_net,caHT));
+
+  // ── SAS HT ──
+  set('sht-net-card', fmt(sht_net)); set('sht-pct-card', pct(sht_net,caHT) + ' du CA HT');
+  set('sht-annual-card', fmt(sht_net*12) + ' / an');
+  set('sht-tva-card', fmt(tva));
+  set('sht-gain-card', '+'+fmt(sht_net-sttc_net)+' /mois'); set('sht-gain-annual', '+'+fmt((sht_net-sttc_net)*12)+' /an');
+  set('sht-ht-calc', fmt(ca)+' TTC − '+fmt(tva)+' TVA'); set('sht-ht', fmt(caHT)); set('sht-ht-marge', fmt(caHT));
+  set('sht-will-lbl', willPct+' %'); set('sht-will-calc', willPct+'% × '+fmt(willBase_ht)+' HT'); set('sht-will','– '+fmt(willCom_ht)); set('sht-will-pct', pct(willCom_ht,caHT)); set('sht-will-marge', fmt(caHT-willCom_ht));
+  set('sht-maurine-lbl', maurinePct+' %'); set('sht-maurine-calc', maurinePct+'% × '+fmt(maurineBase_ht)+' HT'); set('sht-maurine','– '+fmt(maurineCom_ht)); set('sht-maurine-pct', pct(maurineCom_ht,caHT)); set('sht-maurine-marge', fmt(caHT-willCom_ht-maurineCom_ht));
+  set('sht-deborah-lbl', deborahPct+' %'); set('sht-deborah-calc', deborahPct+'% × '+fmt(deborahBase_ht)+' HT'); set('sht-deborah','– '+fmt(deborahCom_ht)); set('sht-deborah-pct', pct(deborahCom_ht,caHT)); set('sht-deborah-marge', fmt(sht_margeApres));
+  set('sht-marge-com', fmt(sht_margeApres)); set('sht-marge-com-pct', pct(sht_margeApres,caHT));
+  set('sht-total-com','– '+fmt(totalCom_ht)); set('sht-total-com-pct', pct(totalCom_ht,caHT));
+  set('sht-diet','– '+fmt(diet)); set('sht-diet-pct',pct(diet,caHT));
+  set('sht-ads','– '+fmt(ads)); set('sht-ads-pct',pct(ads,caHT));
+  set('sht-iclosed','– '+fmt(iclosed)); set('sht-iclosed-pct',pct(iclosed,caHT));
+  set('sht-logiciels','– '+fmt(logiciels)); set('sht-logiciels-pct',pct(logiciels,caHT));
+  set('sht-total-charges','– '+fmt(charges)); set('sht-total-charges-pct', pct(charges,caHT));
+  set('sht-avant-is', fmt(sht_avantIS)); set('sht-avant-is-pct', pct(sht_avantIS,caHT));
+  set('sht-is','– '+fmt(sht_is)); set('sht-is-pct', pct(sht_is,caHT));
+  set('sht-pfu','– '+fmt(sht_pfu)); set('sht-pfu-pct', pct(sht_pfu,caHT));
+  set('sht-net', fmt(sht_net)); set('sht-net-pct', pct(sht_net,caHT));
+
+  // ── COMPARATIF ──
+  set('cmp-si-card', fmt(si_net)); set('cmp-si-pct', pct(si_net,ca)+' du CA TTC'); set('cmp-si-annual', fmt(si_net*12)+' / an');
+  set('cmp-ht-card', fmt(sht_net)); set('cmp-ht-pct', pct(sht_net,caHT)+' du CA HT'); set('cmp-ht-annual', fmt(sht_net*12)+' / an');
+  set('cmp-ttc-card', fmt(sttc_net)); set('cmp-ttc-pct', pct(sttc_net,caHT)+' du CA HT'); set('cmp-ttc-annual', fmt(sttc_net*12)+' / an');
+  set('cmp-r-si', fmt(ca)); set('cmp-r-ht', fmt(caHT)); set('cmp-r-ttc', fmt(caHT));
+  set('cmp-tva-ht','– '+fmt(tva)); set('cmp-tva-ttc','– '+fmt(tva));
+  set('cmp-com-si','– '+fmt(totalCom_ttc)); set('cmp-com-ht','– '+fmt(totalCom_ht)); set('cmp-com-ttc','– '+fmt(totalCom_ttc)); set('cmp-com-diff','– '+fmt(totalCom_ttc-totalCom_ht));
+  set('cmp-chg-si','– '+fmt(charges)); set('cmp-chg-ht','– '+fmt(charges)); set('cmp-chg-ttc','– '+fmt(charges));
+  set('cmp-avantis-si', fmt(si_net)); set('cmp-avantis-ht', fmt(sht_avantIS)); set('cmp-avantis-ttc', fmt(sttc_avantIS)); set('cmp-avantis-diff','– '+fmt(sttc_avantIS-sht_avantIS < 0 ? sht_avantIS-sttc_avantIS : 0));
+  set('cmp-is-ht','– '+fmt(sht_is)); set('cmp-is-ttc','– '+fmt(sttc_is));
+  set('cmp-pfu-ht','– '+fmt(sht_pfu)); set('cmp-pfu-ttc','– '+fmt(sttc_pfu));
+  set('cmp-net-si', fmt(si_net)); set('cmp-net-ht', fmt(sht_net)); set('cmp-net-ttc', fmt(sttc_net)); set('cmp-net-diff','– '+fmt(sht_net-sttc_net));
+  set('cmp-pct-si', pct(si_net,ca)); set('cmp-pct-ht', pct(sht_net,caHT)); set('cmp-pct-ttc', pct(sttc_net,caHT));
+  set('pa-si-mois', fmt(si_net)); set('pa-si-an', fmt(si_net*12));
+  set('pa-ht-mois', fmt(sht_net)); set('pa-ht-an', fmt(sht_net*12));
+  set('pa-ttc-mois', fmt(sttc_net)); set('pa-ttc-an', fmt(sttc_net*12));
+  set('pa-perte-mois','– '+fmt(sht_net-sttc_net)); set('pa-perte-an','– '+fmt((sht_net-sttc_net)*12));
+
+  // ── DIVIDENDES ──
+  document.getElementById('div-summary-box').innerHTML = `
+    <div class="gain-item"><div class="gl">Com. sur HT / mois</div><div class="gv">${fmt(sht_net)}</div></div>
+    <div class="gain-sep"></div>
+    <div class="gain-item"><div class="gl">Com. sur HT / an</div><div class="gv">${fmt(sht_net*12)}</div></div>
+    <div class="gain-sep"></div>
+    <div class="gain-item"><div class="gl">Com. sur TTC / mois</div><div class="gv" style="color:#3498db;">${fmt(sttc_net)}</div></div>
+    <div class="gain-sep"></div>
+    <div class="gain-item"><div class="gl">Com. sur TTC / an</div><div class="gv" style="color:#3498db;">${fmt(sttc_net*12)}</div></div>
+    <div class="gain-sep"></div>
+    <div class="gain-item"><div class="gl">Gain à basculer sur HT</div><div class="gv">+${fmt(sht_net-sttc_net)}/mois</div></div>
+  `;
+  set('dv-ht-ht', fmt(caHT)); set('dv-ttc-ht', fmt(caHT));
+  set('dv-ht-com','– '+fmt(totalCom_ht)); set('dv-ht-com-pct', pct(totalCom_ht,caHT)); set('dv-ttc-com','– '+fmt(totalCom_ttc)); set('dv-ttc-com-pct', pct(totalCom_ttc,caHT));
+  set('dv-ht-chg','– '+fmt(charges)); set('dv-ht-chg-pct', pct(charges,caHT)); set('dv-ttc-chg','– '+fmt(charges)); set('dv-ttc-chg-pct', pct(charges,caHT));
+  set('dv-ht-avantis', fmt(sht_avantIS)); set('dv-ht-avantis-pct', pct(sht_avantIS,caHT)); set('dv-ttc-avantis', fmt(sttc_avantIS)); set('dv-ttc-avantis-pct', pct(sttc_avantIS,caHT));
+  set('dv-ht-is','– '+fmt(sht_is)); set('dv-ht-is-pct', pct(sht_is,caHT)); set('dv-ttc-is','– '+fmt(sttc_is)); set('dv-ttc-is-pct', pct(sttc_is,caHT));
+  set('dv-ht-apres', fmt(sht_apresIS)); set('dv-ht-apres-pct', pct(sht_apresIS,caHT)); set('dv-ttc-apres', fmt(sttc_apresIS)); set('dv-ttc-apres-pct', pct(sttc_apresIS,caHT));
+  set('dv-ht-pfu','– '+fmt(sht_pfu)); set('dv-ht-pfu-pct', pct(sht_pfu,caHT)); set('dv-ttc-pfu','– '+fmt(sttc_pfu)); set('dv-ttc-pfu-pct', pct(sttc_pfu,caHT));
+  set('dv-ht-net', fmt(sht_net)); set('dv-ht-net-pct', pct(sht_net,caHT)); set('dv-ttc-net', fmt(sttc_net)); set('dv-ttc-net-pct', pct(sttc_net,caHT));
+  set('dv-will-from', willPct+' %'); set('dv-will-current-lbl', willPct+' %');
+  set('dv-w-cur-ht', fmt(sht_net)); set('dv-w-cur-ttc', fmt(sttc_net));
+  set('dv-w-10-ht', fmt(w10_ht_net)); set('dv-w-10-ttc', fmt(w10_ttc_net));
+  set('dv-w-gain-ht-mois','+'+fmt(w10_ht_net-sht_net)); set('dv-w-gain-ht-an','+'+fmt((w10_ht_net-sht_net)*12));
+  set('dv-w-gain-ttc-mois','+'+fmt(w10_ttc_net-sttc_net)); set('dv-w-gain-ttc-an','+'+fmt((w10_ttc_net-sttc_net)*12));
+
+  // ── GAIN COMBINÉ ──
+  const gc_gain = gc_comb - gc_ref;
+  const gc_pct_gain = (gc_gain/gc_ref*100).toFixed(1);
+  set('gc-mois', '+'+fmt(gc_gain)); set('gc-an', '+'+fmt(gc_gain*12));
+  set('gc-pct', '+'+gc_pct_gain+' %'); set('gc-marge-finale', pct(gc_comb,caHT)+' du CA HT');
+  set('gc-col-will-cur', willPct+' %');
+
+  // Tableau détaillé 4 scénarios
+  // Scénario REF : Will willPct% TTC
+  const ref_avis = sttc_avantIS;
+  const ref_is = sttc_is; const ref_pfu = sttc_pfu; const ref_net = sttc_net;
+  // ── Labels colonnes
+  set('gc-col-maurine-pct', maurinePct+' %');
+  set('gc-col-deborah-pct', deborahPct+' %');
+
+  // Commissions séparées par scénario
+  // REF : Will willPct% TTC
+  const ref_willCom   = willCom_ttc;
+  const ref_maurineCom = maurineBase_ttc * maurinePct/100;
+  const ref_deborahCom = deborahBase_ttc * deborahPct/100;
+  const ref_avis = sttc_avantIS;
+  const ref_is = sttc_is; const ref_pfu = sttc_pfu; const ref_net = sttc_net;
+
+  // L1 : base HT, Will inchangé
+  const l1_willCom    = willCom_ht;
+  const l1_maurineCom = maurineBase_ht * maurinePct/100;
+  const l1_deborahCom = deborahBase_ht * deborahPct/100;
+  const l1_avis = sht_avantIS; const l1_is = sht_is; const l1_pfu = sht_pfu; const l1_net = sht_net;
+
+  // L2 : Will 10%, base TTC
+  const l2_willCom    = willBase_ttc * 0.10;
+  const l2_maurineCom = maurineBase_ttc * maurinePct/100;
+  const l2_deborahCom = deborahBase_ttc * deborahPct/100;
+  const l2_totCom     = l2_willCom + l2_maurineCom + l2_deborahCom;
+  const l2_avis = caHT - l2_totCom - charges;
+  const l2_is = l2_avis * 0.15; const l2_pfu = (l2_avis-l2_is)*0.30; const l2_net = (l2_avis-l2_is)*0.70;
+
+  // Combiné : Will 10%, base HT
+  const comb_willCom    = willBase_ht * 0.10;
+  const comb_maurineCom = maurineBase_ht * maurinePct/100;
+  const comb_deborahCom = deborahBase_ht * deborahPct/100;
+  const comb_totCom     = comb_willCom + comb_maurineCom + comb_deborahCom;
+  const comb_avis = caHT - comb_totCom - charges;
+  const comb_is = comb_avis * 0.15; const comb_pfu = (comb_avis-comb_is)*0.30; const comb_net = (comb_avis-comb_is)*0.70;
+
+  const scen = [
+    ['ref',  caHT, ref_willCom,  ref_maurineCom,  ref_deborahCom,  totalCom_ttc, charges, ref_avis,  ref_is,  ref_pfu,  ref_net],
+    ['l1',   caHT, l1_willCom,   l1_maurineCom,   l1_deborahCom,   totalCom_ht,  charges, l1_avis,   l1_is,   l1_pfu,   l1_net],
+    ['l2',   caHT, l2_willCom,   l2_maurineCom,   l2_deborahCom,   l2_totCom,    charges, l2_avis,   l2_is,   l2_pfu,   l2_net],
+    ['comb', caHT, comb_willCom, comb_maurineCom, comb_deborahCom, comb_totCom,  charges, comb_avis, comb_is, comb_pfu, comb_net],
+  ];
+  scen.forEach(([s, ht, wc, mc, dc, tc, chg, av, is_, pfu, net]) => {
+    set('gc-r-caht-'+s,    fmt(ht));
+    set('gc-r-will-'+s,    '– '+fmt(wc));
+    set('gc-r-maurine-'+s, '– '+fmt(mc));
+    set('gc-r-deborah-'+s, '– '+fmt(dc));
+    set('gc-r-totcom-'+s,  '– '+fmt(tc));
+    set('gc-r-chg-'+s,     '– '+fmt(chg));
+    set('gc-r-avis-'+s,    fmt(av));
+    set('gc-r-is-'+s,      '– '+fmt(is_));
+    set('gc-r-pfu-'+s,     '– '+fmt(pfu));
+    set('gc-r-net-'+s,     fmt(net));
+    set('gc-r-pct-'+s,     pct(net, caHT));
+  });
+  set('gc-r-gain-l1',    '+'+fmt(l1_net-ref_net));
+  set('gc-r-gain-l2',    '+'+fmt(l2_net-ref_net));
+  set('gc-r-gain-comb',  '+'+fmt(comb_net-ref_net));
+  set('gc-r-gainy-l1',   '+'+fmt((l1_net-ref_net)*12));
+  set('gc-r-gainy-l2',   '+'+fmt((l2_net-ref_net)*12));
+  set('gc-r-gainy-comb', '+'+fmt((comb_net-ref_net)*12));
+
+  // ── DUBAI (sans impôt) ──
+  // TTC = HT = ca (pas de TVA), pas d'IS, pas de PFU
+  set('gc-d-will-cur',   willPct+' %');
+  set('gc-d-will-lbl-ref', willPct+' %');
+  set('gc-d-maurine-lbl', maurinePct+' %');
+  set('gc-d-deborah-lbl', deborahPct+' %');
+
+  // Scénario Dubai actuel : Will willPct% sur CA TTC=HT
+  const dub_willCom    = ca * 0.5 * willPct/100;
+  const dub_maurineCom = ca * 0.5 * maurinePct/100;
+  const dub_deborahCom = ca * deborahPct/100;
+  const dub_totCom     = dub_willCom + dub_maurineCom + dub_deborahCom;
+  const dub_net        = ca - dub_totCom - charges;
+
+  // Scénario Dubai Will 10%
+  const dub10_willCom = ca * 0.5 * 0.10;
+  const dub10_totCom  = dub10_willCom + dub_maurineCom + dub_deborahCom;
+  const dub10_net     = ca - dub10_totCom - charges;
+
+  set('gc-d-ca-ref',      fmt(ca));
+  set('gc-d-ca-w10',      fmt(ca));
+  set('gc-d-will-ref',    '– '+fmt(dub_willCom));
+  set('gc-d-will-w10',    '– '+fmt(dub10_willCom));
+  set('gc-d-will-gain',   '+'+fmt(dub_willCom-dub10_willCom));
+  set('gc-d-maurine-ref', '– '+fmt(dub_maurineCom));
+  set('gc-d-maurine-w10', '– '+fmt(dub_maurineCom));
+  set('gc-d-deborah-ref', '– '+fmt(dub_deborahCom));
+  set('gc-d-deborah-w10', '– '+fmt(dub_deborahCom));
+  set('gc-d-totcom-ref',  '– '+fmt(dub_totCom));
+  set('gc-d-totcom-w10',  '– '+fmt(dub10_totCom));
+  set('gc-d-totcom-gain', '+'+fmt(dub_totCom-dub10_totCom));
+  set('gc-d-chg-ref',     '– '+fmt(charges));
+  set('gc-d-chg-w10',     '– '+fmt(charges));
+  set('gc-d-net-ref',     fmt(dub_net));
+  set('gc-d-net-w10',     fmt(dub10_net));
+  set('gc-d-net-gain',    '+'+fmt(dub10_net-dub_net));
+  set('gc-d-pct-ref',     pct(dub_net, ca));
+  set('gc-d-pct-w10',     pct(dub10_net, ca));
+  set('gc-d-annual-ref',  fmt(dub_net*12));
+  set('gc-d-annual-w10',  fmt(dub10_net*12));
+  set('gc-d-annual-gain', '+'+fmt((dub10_net-dub_net)*12));
+}
+
+update();
+</script>
+</body>
+</html>
